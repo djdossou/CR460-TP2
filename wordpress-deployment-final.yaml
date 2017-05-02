@@ -1,0 +1,39 @@
+apiVersion: v1beta3
+kind: Deployment
+metadata:
+  name: wordpress-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: wordpress-deployment
+    spec:
+      containers:
+      - name: wordpress-deployment
+        image: gcr.io/cr460tp2yd/wordpress-deployment:v1
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: prod
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:mysql://localhost:3306/wordpress-deployment?useUnicode=true&characterEncoding=utf8&useSSL=false
+        ports:
+        - containerPort: 8080
+      - image: b.gcr.io/cloudsql-docker/gce-proxy:1.05
+        name: cloudsql-proxy
+        command: ["/cloud_sql_proxy", "--dir=/cloudsql",
+                  "-instances=cr460tp2yd:us-east1:cr460tp2-db=tcp:3306",
+                  "-credential_file=/secrets/cloudsql/cr460tp2-credentials.json"]
+        volumeMounts:
+          - name: cloudsql-oauth-credentials
+            mountPath: /secrets/cloudsql
+            readOnly: true
+          - name: ssl-certs
+            mountPath: /etc/ssl/certs
+      volumes:
+        - name: cloudsql-oauth-credentials
+          secret:
+            secretName: cloudsql-oauth-credentials
+        - name: ssl-certs
+          hostPath:
+            path: /etc/ssl/certs
